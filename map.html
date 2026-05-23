@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Map </title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <style>
+      @font-face {
+        font-family: "Sun Eden";
+        src: url("./SunEden-Regular.otf") format("opentype");
+      }
+
+      @font-face {
+        font-family: "ABCDiatypeRoundedEdu";
+        src: url("./ABCDiatypeRoundedEdu-Light.otf") format("opentype");
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #f1ede6;
+      }
+
+      body {
+        font-family: "ABCDiatypeRoundedEdu", Arial, sans-serif;
+      }
+
+      .map {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+      }
+
+      .map.is-dragging {
+        cursor: grabbing;
+      }
+
+      .label {
+        fill: #000000;
+        font-size: 44px;
+        letter-spacing: 0;
+      }
+
+      .map-label {
+        fill: #000000;
+        font-size: 34px;
+        paint-order: stroke;
+        stroke: #ffffff;
+        stroke-width: 8px;
+        stroke-linejoin: round;
+      }
+
+      .marker-label {
+        dominant-baseline: hanging;
+      }
+
+    </style>
+  </head>
+  <body>
+    <svg class="map" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc">
+      <title id="title">Sun Eden 2D Map</title>
+      <desc id="desc">
+        A simple symbolic 2D map of Sun Eden with a curved river, green ground,
+        and basic icons for the house, mountain, campfire, and garden.
+      </desc>
+
+      <defs>
+        <clipPath id="groundClip">
+          <rect x="30" y="190" width="1860" height="835" rx="402" ry="402"></rect>
+        </clipPath>
+
+        <mask id="riverMask" maskUnits="userSpaceOnUse">
+          <rect x="-80" y="120" width="2080" height="980" fill="#000000"></rect>
+          <path
+            d="M -40 621
+               C 150 590, 250 540, 418 535
+               C 520 535, 570 570, 635 620
+               C 720 665, 800 690, 852 685
+               C 910 678, 925 585, 960 579
+               C 1025 565, 1110 550, 1177 550
+               C 1265 550, 1350 650, 1393 685
+               C 1435 720, 1470 630, 1502 629
+               C 1580 622, 1740 620, 1960 621"
+            fill="none"
+            stroke="#ffffff"
+            stroke-width="128"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+          </path>
+        </mask>
+
+        <symbol id="houseIcon" viewBox="0 0 120 100">
+          <polygon points="60,0 116,96 4,96" fill="#ff0000"></polygon>
+        </symbol>
+
+        <symbol id="mountainIcon" viewBox="0 0 120 100">
+          <polygon points="60,0 116,96 4,96" fill="#9b9b9b"></polygon>
+        </symbol>
+
+        <symbol id="campfireIcon" viewBox="0 0 80 100">
+          <polygon points="40,0 76,98 4,98" fill="#ff8500"></polygon>
+        </symbol>
+
+        <symbol id="gardenIcon" viewBox="0 0 130 70">
+          <rect x="0" y="0" width="130" height="70" fill="#2c9a52"></rect>
+        </symbol>
+
+        <symbol id="balloonIcon" viewBox="-60 -80 120 160">
+          <ellipse cx="0" cy="0" rx="50" ry="70" fill="#ff4fd8"></ellipse>
+        </symbol>
+
+        <symbol id="signIcon" viewBox="-85 -65 170 130">
+          <line x1="-52" y1="8" x2="-52" y2="62" stroke="#9a642f" stroke-width="12"></line>
+          <line x1="52" y1="8" x2="52" y2="62" stroke="#9a642f" stroke-width="12"></line>
+          <rect x="-78" y="-42" width="156" height="62" fill="#ffffff"></rect>
+        </symbol>
+
+        <symbol id="umbrellaIcon" viewBox="-70 -70 140 140">
+          <path d="M 0 0 L 0 -58 A 58 58 0 0 1 41 -41 Z" fill="#ff4f79"></path>
+          <path d="M 0 0 L 41 -41 A 58 58 0 0 1 58 0 Z" fill="#ffd447"></path>
+          <path d="M 0 0 L 58 0 A 58 58 0 0 1 41 41 Z" fill="#31c7f5"></path>
+          <path d="M 0 0 L 41 41 A 58 58 0 0 1 0 58 Z" fill="#ffffff"></path>
+          <path d="M 0 0 L 0 58 A 58 58 0 0 1 -41 41 Z" fill="#ff4f79"></path>
+          <path d="M 0 0 L -41 41 A 58 58 0 0 1 -58 0 Z" fill="#ffd447"></path>
+          <path d="M 0 0 L -58 0 A 58 58 0 0 1 -41 -41 Z" fill="#31c7f5"></path>
+          <path d="M 0 0 L -41 -41 A 58 58 0 0 1 0 -58 Z" fill="#ffffff"></path>
+          <circle cx="0" cy="0" r="8" fill="#d7dce2"></circle>
+        </symbol>
+
+        <symbol id="chairIcon" viewBox="-70 -60 140 120">
+          <rect x="-42" y="-32" width="84" height="56" fill="#ffffff"></rect>
+          <rect x="-54" y="-10" width="12" height="58" fill="#ffffff"></rect>
+          <rect x="42" y="-10" width="12" height="58" fill="#ffffff"></rect>
+          <rect x="-34" y="24" width="68" height="14" fill="#ffffff"></rect>
+        </symbol>
+
+        <symbol id="chickenIcon" viewBox="-18 -18 36 36">
+          <rect x="-12" y="-12" width="24" height="24" fill="#ffffff"></rect>
+        </symbol>
+
+        <symbol id="butterflyIcon" viewBox="-16 -16 32 32">
+          <rect x="-9" y="-9" width="18" height="18" fill="#ff4fd8"></rect>
+        </symbol>
+
+        <symbol id="fishIcon" viewBox="-30 -12 60 24">
+          <polygon points="-26,0 26,-9 26,9" fill="currentColor"></polygon>
+        </symbol>
+
+        <symbol id="beachBallIcon" viewBox="-60 -60 120 120">
+          <circle cx="0" cy="0" r="50" fill="#f7f4ea"></circle>
+          <path d="M 0 0 L 0 -50 A 50 50 0 0 1 43.3 -25 Z" fill="#1f5fe0"></path>
+          <path d="M 0 0 L 43.3 -25 A 50 50 0 0 1 43.3 25 Z" fill="#39c778"></path>
+          <path d="M 0 0 L 43.3 25 A 50 50 0 0 1 0 50 Z" fill="#f7c744"></path>
+          <path d="M 0 0 L 0 50 A 50 50 0 0 1 -43.3 25 Z" fill="#e747a9"></path>
+          <path d="M 0 0 L -43.3 25 A 50 50 0 0 1 -43.3 -25 Z" fill="#f7f4ea"></path>
+          <path d="M 0 0 L -43.3 -25 A 50 50 0 0 1 0 -50 Z" fill="#e53935"></path>
+          <circle cx="0" cy="0" r="12" fill="#f7f4ea"></circle>
+        </symbol>
+
+        <symbol id="floatieIcon" viewBox="-60 -60 120 120">
+          <circle cx="0" cy="0" r="38" fill="none" stroke="#ff7a00" stroke-width="18"></circle>
+        </symbol>
+
+        <symbol id="cowIcon" viewBox="-45 -28 90 56">
+          <rect x="-36" y="-16" width="72" height="32" fill="#c99b68"></rect>
+        </symbol>
+
+        <symbol id="giraffeIcon" viewBox="-42 -60 84 120">
+          <rect x="-14" y="-58" width="28" height="116" fill="#f4ca62"></rect>
+        </symbol>
+
+        <symbol id="birdIcon" viewBox="-44 -28 88 56">
+          <polygon points="0,-18 44,18 -44,18" fill="#5c4033"></polygon>
+        </symbol>
+
+        <symbol id="helicopterIcon" viewBox="-80 -44 160 88">
+          <rect x="-64" y="-16" width="128" height="32" fill="#000000"></rect>
+        </symbol>
+      </defs>
+
+      <!-- Map body -->
+      <g id="worldMap" transform="translate(960 540) scale(0.94) translate(-960 -582)">
+        <rect x="30" y="190" width="1860" height="835" rx="402" ry="402" fill="#25ff00"></rect>
+
+        <g clip-path="url(#groundClip)">
+          <path
+            d="M -40 621
+               C 150 590, 250 540, 418 535
+               C 520 535, 570 570, 635 620
+               C 720 665, 800 690, 852 685
+               C 910 678, 925 585, 960 579
+               C 1025 565, 1110 550, 1177 550
+               C 1265 550, 1350 650, 1393 685
+               C 1435 720, 1470 630, 1502 629
+               C 1580 622, 1740 620, 1960 621"
+            fill="none"
+            stroke="#39bee8"
+            stroke-width="128"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+          </path>
+        </g>
+
+        <path
+          id="fishRoute"
+          d="M 55 621
+             C 150 590, 250 540, 418 535
+             C 520 535, 570 570, 635 620
+             C 720 665, 800 690, 852 685
+             C 910 678, 925 585, 960 579
+             C 1025 565, 1110 550, 1177 550
+             C 1265 550, 1350 650, 1393 685
+             C 1435 720, 1470 630, 1502 629
+             C 1580 622, 1740 620, 1915 621"
+          fill="none"
+          stroke="none">
+        </path>
+        <path
+          id="riverFloatRoute"
+          d="M 66 621
+             C 190 595, 285 548, 418 543
+             C 518 543, 568 578, 632 625
+             C 718 666, 800 687, 852 681
+             C 910 674, 926 590, 960 585
+             C 1025 571, 1110 558, 1177 558
+             C 1260 558, 1348 653, 1392 686
+             C 1433 716, 1472 637, 1505 636
+             C 1580 630, 1710 626, 1926 621"
+          fill="none"
+          stroke="none">
+        </path>
+
+        <g clip-path="url(#groundClip)" mask="url(#riverMask)">
+          <g>
+            <animateMotion dur="84s" begin="-6s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-26" y="-29" width="52" height="22" style="color: #ff6b6b"></use>
+            <use href="#fishIcon" x="-26" y="-29" width="52" height="22" style="color: #ff6b6b" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="92s" begin="-18s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-25" y="12" width="50" height="22" style="color: #ff922b"></use>
+            <use href="#fishIcon" x="-25" y="12" width="50" height="22" style="color: #ff922b" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="88s" begin="-30s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-24" y="-10" width="48" height="21" style="color: #ffd43b"></use>
+            <use href="#fishIcon" x="-24" y="-10" width="48" height="21" style="color: #ffd43b" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="98s" begin="-42s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-25" y="25" width="50" height="21" style="color: #8ce99a"></use>
+            <use href="#fishIcon" x="-25" y="25" width="50" height="21" style="color: #8ce99a" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="94s" begin="-54s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-26" y="-39" width="52" height="22" style="color: #38d9a9"></use>
+            <use href="#fishIcon" x="-26" y="-39" width="52" height="22" style="color: #38d9a9" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="90s" begin="-66s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-24" y="-2" width="48" height="21" style="color: #0051b8"></use>
+            <use href="#fishIcon" x="-24" y="-2" width="48" height="21" style="color: #0051b8" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="100s" begin="-78s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-26" y="33" width="52" height="22" style="color: #9775fa"></use>
+            <use href="#fishIcon" x="-26" y="33" width="52" height="22" style="color: #9775fa" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="96s" begin="-84s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-25" y="-20" width="50" height="22" style="color: #f06595"></use>
+            <use href="#fishIcon" x="-25" y="-20" width="50" height="22" style="color: #f06595" transform="translate(-1860 0)"></use>
+          </g>
+          <g>
+            <animateMotion dur="104s" begin="-24s" repeatCount="indefinite" rotate="0">
+              <mpath href="#fishRoute"></mpath>
+            </animateMotion>
+            <use href="#fishIcon" x="-24" y="21" width="48" height="21" style="color: #94d82d"></use>
+            <use href="#fishIcon" x="-24" y="21" width="48" height="21" style="color: #94d82d" transform="translate(-1860 0)"></use>
+          </g>
+        </g>
+
+        <g clip-path="url(#groundClip)">
+          <g>
+            <animateMotion dur="126s" begin="-38s" repeatCount="indefinite" rotate="0">
+              <mpath href="#riverFloatRoute"></mpath>
+            </animateMotion>
+            <use href="#beachBallIcon" x="-33" y="-59" width="66" height="66"></use>
+            <text class="map-label marker-label" x="0" y="14" text-anchor="middle">beach ball</text>
+            <g transform="translate(-1860 0)">
+              <use href="#beachBallIcon" x="-33" y="-59" width="66" height="66"></use>
+              <text class="map-label marker-label" x="0" y="14" text-anchor="middle">beach ball</text>
+            </g>
+          </g>
+          <g>
+            <animateMotion dur="168s" begin="-82s" repeatCount="indefinite" rotate="0">
+              <mpath href="#riverFloatRoute"></mpath>
+            </animateMotion>
+            <use href="#floatieIcon" x="-37" y="-60" width="74" height="74"></use>
+            <text class="map-label marker-label" x="0" y="14" text-anchor="middle">floatie</text>
+            <g transform="translate(-1860 0)">
+              <use href="#floatieIcon" x="-37" y="-60" width="74" height="74"></use>
+              <text class="map-label marker-label" x="0" y="14" text-anchor="middle">floatie</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- Two simple bridges crossing the river. -->
+        <rect x="833" y="588" width="56" height="190" fill="#8a5a2f" transform="rotate(-18 861 683)"></rect>
+        <text class="map-label marker-label" x="878" y="805" text-anchor="middle">bridge</text>
+        <rect x="1558" y="545" width="56" height="190" fill="#8a5a2f" transform="rotate(12 1586 640)"></rect>
+        <text class="map-label marker-label" x="1586" y="762" text-anchor="middle">bridge</text>
+
+        <!-- Hot air balloon: primitive marker animated along its route. -->
+        <path
+          id="balloonRoute"
+          d="M 960 210
+             C 1285 210, 1585 370, 1585 600
+             C 1585 830, 1285 970, 960 955
+             C 635 970, 335 830, 335 600
+             C 335 370, 635 210, 960 210 Z"
+          fill="none"
+          stroke="none">
+        </path>
+        <!-- Important places, placed approximately rather than mathematically projected. -->
+        <g transform="translate(960 399)">
+          <use href="#houseIcon" x="-52" y="-82" width="104" height="87"></use>
+          <text class="map-label marker-label" x="0" y="14" text-anchor="middle">house</text>
+        </g>
+
+        <g transform="translate(409 894)">
+          <use href="#mountainIcon" x="-62" y="-108" width="124" height="104"></use>
+          <text class="map-label marker-label" x="0" y="14" text-anchor="middle">mountain</text>
+        </g>
+
+        <g transform="translate(1448 425)">
+          <use href="#campfireIcon" x="-28" y="-78" width="56" height="73"></use>
+          <text class="map-label marker-label" x="0" y="14" text-anchor="middle">campfire</text>
+        </g>
+
+        <g transform="translate(1171 384)">
+          <use href="#gardenIcon" x="-58" y="-66" width="116" height="62"></use>
+          <text class="map-label marker-label" x="0" y="14" text-anchor="middle">garden</text>
+        </g>
+
+        <g transform="translate(770 410)">
+          <use href="#signIcon" x="-54" y="-70" width="108" height="82"></use>
+          <text class="map-label marker-label" x="0" y="36" text-anchor="middle">sign</text>
+        </g>
+
+        <g transform="translate(496 424)">
+          <use href="#umbrellaIcon" x="-44" y="-72" width="88" height="88"></use>
+          <text class="map-label marker-label" x="0" y="30" text-anchor="middle">umbrella</text>
+        </g>
+
+        <g transform="translate(605 438)">
+          <use href="#chairIcon" x="-34" y="-55" width="68" height="58"></use>
+          <text class="map-label marker-label" x="0" y="18" text-anchor="middle">chair</text>
+        </g>
+
+        <g transform="translate(1790 146)">
+          <circle cx="0" cy="-34" r="58" fill="#fff600"></circle>
+          <text class="map-label marker-label" x="0" y="48" text-anchor="middle">sun</text>
+        </g>
+
+        <g transform="translate(130 146)">
+          <circle cx="0" cy="-34" r="58" fill="#b9b9b9"></circle>
+          <text class="map-label marker-label" x="0" y="48" text-anchor="middle">moon</text>
+        </g>
+
+        <!-- Moving animals, simplified from their index.html movement territories. -->
+        <path id="chickenRouteA" d="M 1092 350 C 1115 318, 1165 320, 1185 350 C 1160 378, 1115 382, 1092 350 Z" fill="none" stroke="none"></path>
+        <path id="chickenRouteB" d="M 1228 335 C 1265 338, 1288 378, 1260 410 C 1222 412, 1202 365, 1228 335 Z" fill="none" stroke="none"></path>
+        <path id="chickenRouteC" d="M 1088 440 C 1125 470, 1190 452, 1205 410 C 1165 392, 1100 400, 1088 440 Z" fill="none" stroke="none"></path>
+        <path id="chickenRouteD" d="M 1255 432 C 1300 405, 1314 350, 1275 326 C 1244 355, 1228 410, 1255 432 Z" fill="none" stroke="none"></path>
+        <path id="butterflyRoute" d="M 925 366 C 948 330, 1002 334, 1010 380 C 1004 428, 938 430, 918 392 C 908 378, 912 366, 925 366 Z" fill="none" stroke="none"></path>
+        <g>
+          <animateMotion dur="27s" repeatCount="indefinite" rotate="0">
+            <mpath href="#chickenRouteA"></mpath>
+          </animateMotion>
+          <use href="#chickenIcon" x="-13" y="-13" width="26" height="26"></use>
+        </g>
+        <g>
+          <animateMotion dur="31s" repeatCount="indefinite" rotate="0">
+            <mpath href="#chickenRouteB"></mpath>
+          </animateMotion>
+          <use href="#chickenIcon" x="-12" y="-12" width="24" height="24"></use>
+        </g>
+        <g>
+          <animateMotion dur="30s" repeatCount="indefinite" rotate="0">
+            <mpath href="#chickenRouteC"></mpath>
+          </animateMotion>
+          <use href="#chickenIcon" x="-12" y="-12" width="24" height="24"></use>
+        </g>
+        <g>
+          <animateMotion dur="33s" repeatCount="indefinite" rotate="0">
+            <mpath href="#chickenRouteD"></mpath>
+          </animateMotion>
+          <use href="#chickenIcon" x="-12" y="-12" width="24" height="24"></use>
+        </g>
+
+        <g>
+          <animateMotion dur="20s" repeatCount="indefinite" rotate="0">
+            <mpath href="#butterflyRoute"></mpath>
+          </animateMotion>
+          <use href="#butterflyIcon" x="-10" y="-10" width="20" height="20"></use>
+        </g>
+
+        <path id="cowRoute" d="M 1118 220 C 1190 184, 1300 196, 1322 254 C 1280 296, 1164 306, 1108 266 C 1086 248, 1092 230, 1118 220 Z" fill="none" stroke="none"></path>
+        <g>
+          <animateMotion dur="50s" repeatCount="indefinite" rotate="0">
+            <mpath href="#cowRoute"></mpath>
+          </animateMotion>
+          <use href="#cowIcon" x="-64" y="-30" width="128" height="60"></use>
+          <text class="map-label marker-label" x="0" y="38" text-anchor="middle">cow</text>
+        </g>
+
+        <path id="giraffeRoute" d="M 765 662 C 850 625, 1050 620, 1145 666 C 1048 704, 865 704, 765 662 Z" fill="none" stroke="none"></path>
+        <g>
+          <animateMotion dur="52s" repeatCount="indefinite" rotate="0">
+            <mpath href="#giraffeRoute"></mpath>
+          </animateMotion>
+          <use href="#giraffeIcon" x="-44" y="-70" width="88" height="126"></use>
+          <text class="map-label marker-label" x="0" y="62" text-anchor="middle">giraffe</text>
+        </g>
+
+        <path id="birdOrbitRoute" d="M 960 150 C 1335 150, 1665 350, 1665 600 C 1665 850, 1335 1010, 960 1000 C 585 1010, 255 850, 255 600 C 255 350, 585 150, 960 150 Z" fill="none" stroke="none"></path>
+        <g>
+          <animateMotion dur="52s" repeatCount="indefinite" rotate="0">
+            <mpath href="#birdOrbitRoute"></mpath>
+          </animateMotion>
+          <use href="#birdIcon" x="-31" y="-19" width="62" height="38"></use>
+          <text class="map-label marker-label" x="0" y="34" text-anchor="middle">bird</text>
+        </g>
+
+        <path id="mountainBirdRoute" d="M 330 780 C 420 720, 530 790, 500 890 C 450 985, 300 930, 330 780 Z" fill="none" stroke="none"></path>
+        <g>
+          <animateMotion dur="32s" repeatCount="indefinite" rotate="0">
+            <mpath href="#mountainBirdRoute"></mpath>
+          </animateMotion>
+          <use href="#birdIcon" x="-31" y="-19" width="62" height="38"></use>
+          <text class="map-label marker-label" x="0" y="30" text-anchor="middle">bird</text>
+        </g>
+
+        <path id="helicopterRoute" d="M 1370 270 C 1020 210, 710 420, 820 640 C 930 850, 1300 930, 1510 770 C 1695 600, 1620 335, 1370 270 Z" fill="none" stroke="none"></path>
+
+        <!-- Balloon is high, helicopter below is drawn after it so night patrol sits on top. -->
+        <g>
+          <animateMotion dur="90s" repeatCount="indefinite" rotate="0">
+            <mpath href="#balloonRoute"></mpath>
+          </animateMotion>
+          <use href="#balloonIcon" x="-60" y="-80" width="120" height="160"></use>
+          <text class="map-label marker-label" x="0" y="94" text-anchor="middle">hot air balloon</text>
+        </g>
+
+        <!-- Drawn last so it appears above every map element, including the balloon. -->
+        <g>
+          <animateMotion dur="48s" repeatCount="indefinite" rotate="0">
+            <mpath href="#helicopterRoute"></mpath>
+          </animateMotion>
+          <use href="#helicopterIcon" x="-70" y="-36" width="140" height="72"></use>
+          <text class="map-label marker-label" x="0" y="46" text-anchor="middle">helicopter</text>
+        </g>
+      </g>
+    </svg>
+    <script>
+      var mapSvg = document.querySelector(".map");
+      var baseViewBox = { x: 0, y: 0, width: 1920, height: 1080 };
+      var mapZoom = 1;
+      var mapCenter = {
+        x: baseViewBox.x + baseViewBox.width / 2,
+        y: baseViewBox.y + baseViewBox.height / 2
+      };
+      var dragState = null;
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function applyMapViewBox() {
+        var width = baseViewBox.width / mapZoom;
+        var height = baseViewBox.height / mapZoom;
+        var minCenterX = baseViewBox.x + width / 2;
+        var maxCenterX = baseViewBox.x + baseViewBox.width - width / 2;
+        var minCenterY = baseViewBox.y + height / 2;
+        var maxCenterY = baseViewBox.y + baseViewBox.height - height / 2;
+
+        mapCenter.x = clamp(mapCenter.x, minCenterX, maxCenterX);
+        mapCenter.y = clamp(mapCenter.y, minCenterY, maxCenterY);
+
+        if (mapZoom <= 1.001) {
+          mapCenter.x = baseViewBox.x + baseViewBox.width / 2;
+          mapCenter.y = baseViewBox.y + baseViewBox.height / 2;
+        }
+
+        mapSvg.setAttribute(
+          "viewBox",
+          [
+            mapCenter.x - width / 2,
+            mapCenter.y - height / 2,
+            width,
+            height
+          ].join(" ")
+        );
+      }
+
+      function zoomMap(step) {
+        var nextZoom = clamp(mapZoom * Math.pow(1.22, step), 1, 3.1);
+        mapZoom = nextZoom;
+        applyMapViewBox();
+      }
+
+      mapSvg.addEventListener("pointerdown", function (event) {
+        if (mapZoom <= 1.001) return;
+        mapSvg.setPointerCapture(event.pointerId);
+        mapSvg.classList.add("is-dragging");
+        dragState = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          centerX: mapCenter.x,
+          centerY: mapCenter.y,
+          viewWidth: baseViewBox.width / mapZoom,
+          viewHeight: baseViewBox.height / mapZoom
+        };
+      });
+
+      mapSvg.addEventListener("pointermove", function (event) {
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        var dx = event.clientX - dragState.startX;
+        var dy = event.clientY - dragState.startY;
+        mapCenter.x = dragState.centerX - dx * (dragState.viewWidth / mapSvg.clientWidth);
+        mapCenter.y = dragState.centerY - dy * (dragState.viewHeight / mapSvg.clientHeight);
+        applyMapViewBox();
+      });
+
+      function stopDragging(event) {
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        dragState = null;
+        mapSvg.classList.remove("is-dragging");
+      }
+
+      mapSvg.addEventListener("pointerup", stopDragging);
+      mapSvg.addEventListener("pointercancel", stopDragging);
+
+      window.addEventListener("message", function (event) {
+        if (!event.data || event.data.type !== "suneden-map-zoom") return;
+        zoomMap(event.data.step);
+      });
+
+      applyMapViewBox();
+
+    </script>
+  </body>
+</html>
