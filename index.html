@@ -44,6 +44,11 @@
 
           function loadDecalTexture(src) {
             var texture = loader.load(src);
+            prepareDecalTexture(texture);
+            return texture;
+          }
+
+          function prepareDecalTexture(texture) {
             if (THREE.SRGBColorSpace) {
               texture.colorSpace = THREE.SRGBColorSpace;
             } else if (THREE.sRGBEncoding) {
@@ -52,6 +57,23 @@
             texture.generateMipmaps = false;
             texture.minFilter = THREE.LinearFilter;
             texture.magFilter = THREE.LinearFilter;
+          }
+
+          function createJerseyTexture() {
+            var canvas = document.createElement("canvas");
+            canvas.width = 1024;
+            canvas.height = 1024;
+            var ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#000000";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "900 720px Arial, sans-serif";
+            ctx.fillText("19", 512, 430);
+            ctx.font = "700 150px Arial, sans-serif";
+            ctx.fillText("kiki123", 512, 850);
+            var texture = new THREE.CanvasTexture(canvas);
+            prepareDecalTexture(texture);
             return texture;
           }
 
@@ -63,10 +85,11 @@
             return meshes;
           }
 
-          function projectGeometryToModel(geometry, modelMeshes, surfaceOffset) {
+          function projectGeometryToModel(geometry, modelMeshes, options) {
             var position = geometry.attributes.position;
             var raycaster = new THREE.Raycaster();
-            var rayDirection = new THREE.Vector3(0, 0, -1);
+            var rayDirection = new THREE.Vector3().fromArray(options.projectDirection || [0, 0, -1]);
+            var rayStartOffset = new THREE.Vector3().fromArray(options.rayStartOffset || [0, 0, 0.55]);
             var origin = new THREE.Vector3();
             var worldOrigin = new THREE.Vector3();
             var worldDirection = new THREE.Vector3();
@@ -76,7 +99,7 @@
 
             for (var i = 0; i < position.count; i++) {
               origin.fromBufferAttribute(position, i);
-              root.localToWorld(worldOrigin.copy(origin).add(new THREE.Vector3(0, 0, 0.55)));
+              root.localToWorld(worldOrigin.copy(origin).add(rayStartOffset));
               worldDirection.copy(rayDirection).transformDirection(root.matrixWorld);
               raycaster.set(worldOrigin, worldDirection);
               var hits = raycaster.intersectObjects(modelMeshes, true);
@@ -84,7 +107,7 @@
 
               normalMatrix.getNormalMatrix(hits[0].object.matrixWorld);
               worldNormal.copy(hits[0].face.normal).applyMatrix3(normalMatrix).normalize();
-              localHit.copy(hits[0].point).addScaledVector(worldNormal, surfaceOffset);
+              localHit.copy(hits[0].point).addScaledVector(worldNormal, options.surfaceOffset);
               root.worldToLocal(localHit);
               position.setXYZ(i, localHit.x, localHit.y, localHit.z);
             }
@@ -119,12 +142,12 @@
             geometry.rotateZ(options.rotation[2]);
             geometry.translate(options.position[0], options.position[1], options.position[2]);
             if (options.projectToModel) {
-              projectGeometryToModel(geometry, modelMeshes, options.surfaceOffset);
+              projectGeometryToModel(geometry, modelMeshes, options);
             }
             geometry.computeVertexNormals();
 
             var materialOptions = {
-              map: loadDecalTexture(options.src),
+              map: options.texture || loadDecalTexture(options.src),
               transparent: true,
               alphaTest: options.alphaTest,
               opacity: options.opacity,
@@ -165,7 +188,7 @@
               sideFalloff: 0.01,
               verticalFalloff: 0.004,
               alphaTest: 0.08,
-              opacity: 0.55,
+              opacity: 0.59,
               depthTest: true,
               lit: true,
               side: THREE.FrontSide,
@@ -174,6 +197,31 @@
               position: [0.035, 0.225, 0.326],
               rotation: [-0.08, -0.06, -0.05],
               renderOrder: 1000
+            }, modelMeshes);
+
+            createDecal({
+              texture: createJerseyTexture(),
+              width: 0.63,
+              height: 0.72,
+              segmentsX: 32,
+              segmentsY: 32,
+              bendRadius: 0.82,
+              bendDepth: 0.72,
+              lift: 0.045,
+              sideFalloff: 0.008,
+              verticalFalloff: 0.006,
+              alphaTest: 0.04,
+              opacity: 0.94,
+              depthTest: true,
+              lit: true,
+              side: THREE.FrontSide,
+              projectToModel: true,
+              surfaceOffset: 0.0045,
+              projectDirection: [0, 0, 1],
+              rayStartOffset: [0, 0, -0.55],
+              position: [0, 0.24, -0.33],
+              rotation: [0.08, Math.PI - 0.04, 0],
+              renderOrder: 999
             }, modelMeshes);
 
             createDecal({
@@ -241,10 +289,12 @@
           this.raycaster = new THREE.Raycaster();
           this.modelMeshes = [];
           this.handlePointerMove = this.updateModelHover.bind(this);
+          this.handlePointerUp = this.handleModelTap.bind(this);
           this.handlePointerLeave = this.endModelHover.bind(this);
           this.attachHoverTracking = function () {
             this.hoverTarget = this.el.sceneEl.canvas || this.el.sceneEl;
             this.hoverTarget.addEventListener("mousemove", this.handlePointerMove);
+            this.hoverTarget.addEventListener("pointerup", this.handlePointerUp);
             this.hoverTarget.addEventListener("mouseleave", this.handlePointerLeave);
           }.bind(this);
           if (this.el.sceneEl.canvas) {
@@ -275,18 +325,27 @@
           if (this.hoverTarget) this.hoverTarget.style.cursor = "";
         },
         updateModelHover: function (event) {
-          if (!this.modelMeshes.length || !this.el.sceneEl.camera) return;
-          var rect = this.hoverTarget.getBoundingClientRect();
-          this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-          this.raycaster.setFromCamera(this.pointer, this.el.sceneEl.camera);
-          var hits = this.raycaster.intersectObjects(this.modelMeshes, true);
+          var hits = this.getModelHits(event);
+          if (!hits) return;
           if (hits.length) {
             if (!this.hovered) this.startModelHover();
             this.hoverTarget.style.cursor = "pointer";
           } else {
             this.endModelHover();
           }
+        },
+        handleModelTap: function (event) {
+          var hits = this.getModelHits(event);
+          if (!hits || !hits.length) return;
+          this.startModelHover();
+        },
+        getModelHits: function (event) {
+          if (!this.modelMeshes.length || !this.el.sceneEl.camera) return null;
+          var rect = this.hoverTarget.getBoundingClientRect();
+          this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          this.raycaster.setFromCamera(this.pointer, this.el.sceneEl.camera);
+          return this.raycaster.intersectObjects(this.modelMeshes, true);
         },
         easeSpin: function (t) {
           var inverse = 1 - t;
@@ -318,6 +377,7 @@
         remove: function () {
           if (this.hoverTarget) {
             this.hoverTarget.removeEventListener("mousemove", this.handlePointerMove);
+            this.hoverTarget.removeEventListener("pointerup", this.handlePointerUp);
             this.hoverTarget.removeEventListener("mouseleave", this.handlePointerLeave);
             this.hoverTarget.style.cursor = "";
           }
@@ -668,6 +728,7 @@
         inset: 0;
         z-index: 1;
         pointer-events: auto;
+        touch-action: pan-y;
       }
 
       .shirt-scene {
@@ -678,6 +739,7 @@
 
       .shirt-scene canvas {
         background: transparent !important;
+        touch-action: pan-y;
       }
 
       .a-enter-vr,
@@ -856,9 +918,11 @@
         }
 
         .values {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 132px));
           align-items: center;
-          gap: 18px;
+          justify-content: center;
+          column-gap: 52px;
+          row-gap: 24px;
           min-height: auto;
           padding: 42px 24px 48px;
         }
@@ -871,6 +935,12 @@
         .value-icon {
           width: clamp(86px, 24vw, 114px);
           height: clamp(86px, 24vw, 114px);
+        }
+
+        .value:nth-child(1) {
+          grid-column: 1 / -1;
+          justify-self: center;
+          width: min(132px, 100%);
         }
 
         .value-label {
