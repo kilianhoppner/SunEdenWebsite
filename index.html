@@ -5,6 +5,326 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sun Eden</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script>
+      AFRAME.registerComponent("fit-shirt-model", {
+        schema: {
+          height: { type: "number", default: 2.18 }
+        },
+        init: function () {
+          this.el.addEventListener("model-loaded", this.fitModel.bind(this));
+        },
+        fitModel: function () {
+          var object = this.el.object3D;
+          var box = new THREE.Box3().setFromObject(object);
+          var size = new THREE.Vector3();
+          var center = new THREE.Vector3();
+          var localCenter = new THREE.Vector3();
+          box.getSize(size);
+          box.getCenter(center);
+          if (!size.y) return;
+
+          var scale = this.data.height / size.y;
+          localCenter.copy(center);
+          if (object.parent) object.parent.worldToLocal(localCenter);
+          object.scale.setScalar(scale);
+          object.position.set(
+            -localCenter.x * scale,
+            -localCenter.y * scale,
+            -localCenter.z * scale
+          );
+        }
+      });
+
+      AFRAME.registerComponent("shirt-logo-decal", {
+        init: function () {
+          var loader = new THREE.TextureLoader();
+          var root = this.el.object3D;
+          var modelEl = this.el.parentElement.querySelector("[gltf-model]");
+
+          function loadDecalTexture(src) {
+            var texture = loader.load(src);
+            if (THREE.SRGBColorSpace) {
+              texture.colorSpace = THREE.SRGBColorSpace;
+            } else if (THREE.sRGBEncoding) {
+              texture.encoding = THREE.sRGBEncoding;
+            }
+            texture.generateMipmaps = false;
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            return texture;
+          }
+
+          function getVisibleMeshes(object) {
+            var meshes = [];
+            object.traverse(function (child) {
+              if (child.isMesh && child.visible) meshes.push(child);
+            });
+            return meshes;
+          }
+
+          function projectGeometryToModel(geometry, modelMeshes, surfaceOffset) {
+            var position = geometry.attributes.position;
+            var raycaster = new THREE.Raycaster();
+            var rayDirection = new THREE.Vector3(0, 0, -1);
+            var origin = new THREE.Vector3();
+            var worldOrigin = new THREE.Vector3();
+            var worldDirection = new THREE.Vector3();
+            var localHit = new THREE.Vector3();
+            var normalMatrix = new THREE.Matrix3();
+            var worldNormal = new THREE.Vector3();
+
+            for (var i = 0; i < position.count; i++) {
+              origin.fromBufferAttribute(position, i);
+              root.localToWorld(worldOrigin.copy(origin).add(new THREE.Vector3(0, 0, 0.55)));
+              worldDirection.copy(rayDirection).transformDirection(root.matrixWorld);
+              raycaster.set(worldOrigin, worldDirection);
+              var hits = raycaster.intersectObjects(modelMeshes, true);
+              if (!hits.length) continue;
+
+              normalMatrix.getNormalMatrix(hits[0].object.matrixWorld);
+              worldNormal.copy(hits[0].face.normal).applyMatrix3(normalMatrix).normalize();
+              localHit.copy(hits[0].point).addScaledVector(worldNormal, surfaceOffset);
+              root.worldToLocal(localHit);
+              position.setXYZ(i, localHit.x, localHit.y, localHit.z);
+            }
+            position.needsUpdate = true;
+            geometry.computeVertexNormals();
+          }
+
+          function createDecal(options, modelMeshes) {
+            var geometry = new THREE.PlaneGeometry(
+              options.width,
+              options.height,
+              options.segmentsX,
+              options.segmentsY
+            );
+            var position = geometry.attributes.position;
+            var halfWidth = options.width / 2;
+            var halfHeight = options.height / 2;
+            for (var i = 0; i < position.count; i++) {
+              var originalX = position.getX(i);
+              var x = originalX / halfWidth;
+              var y = position.getY(i) / halfHeight;
+              var z = options.lift - Math.abs(x) * options.sideFalloff - Math.abs(y) * options.verticalFalloff;
+              if (options.bendRadius) {
+                var bend = originalX / options.bendRadius;
+                position.setX(i, Math.sin(bend) * options.bendRadius);
+                z += (Math.cos(bend) - 1) * options.bendRadius * options.bendDepth;
+              }
+              position.setZ(i, z);
+            }
+            geometry.rotateX(options.rotation[0]);
+            geometry.rotateY(options.rotation[1]);
+            geometry.rotateZ(options.rotation[2]);
+            geometry.translate(options.position[0], options.position[1], options.position[2]);
+            if (options.projectToModel) {
+              projectGeometryToModel(geometry, modelMeshes, options.surfaceOffset);
+            }
+            geometry.computeVertexNormals();
+
+            var materialOptions = {
+              map: loadDecalTexture(options.src),
+              transparent: true,
+              alphaTest: options.alphaTest,
+              opacity: options.opacity,
+              side: options.side || THREE.DoubleSide,
+              depthTest: options.depthTest,
+              depthWrite: false,
+              polygonOffset: true,
+              polygonOffsetFactor: -1
+            };
+            if (options.lit) {
+              materialOptions.roughness = 1;
+              materialOptions.metalness = 0;
+            } else {
+              materialOptions.toneMapped = false;
+            }
+            var material = options.lit
+              ? new THREE.MeshStandardMaterial(materialOptions)
+              : new THREE.MeshBasicMaterial(materialOptions);
+
+            var mesh = new THREE.Mesh(geometry, material);
+            mesh.renderOrder = options.renderOrder;
+            root.add(mesh);
+          }
+
+          function createShirtDecals() {
+            root.updateMatrixWorld(true);
+            modelEl.object3D.updateMatrixWorld(true);
+            var modelMeshes = getVisibleMeshes(modelEl.object3D);
+            createDecal({
+              src: "./Logo.svg",
+              width: 0.735,
+              height: 0.346,
+              segmentsX: 40,
+              segmentsY: 12,
+              bendRadius: 0.72,
+              bendDepth: 0.85,
+              lift: 0.095,
+              sideFalloff: 0.01,
+              verticalFalloff: 0.004,
+              alphaTest: 0.08,
+              opacity: 0.55,
+              depthTest: true,
+              lit: true,
+              side: THREE.FrontSide,
+              projectToModel: true,
+              surfaceOffset: 0.0035,
+              position: [0.035, 0.225, 0.326],
+              rotation: [-0.08, -0.06, -0.05],
+              renderOrder: 1000
+            }, modelMeshes);
+
+            createDecal({
+              src: "./kappa.png",
+              width: 0.148,
+              height: 0.197,
+              segmentsX: 10,
+              segmentsY: 12,
+              lift: 0.03,
+              sideFalloff: 0.01,
+              verticalFalloff: 0.004,
+              alphaTest: 0.08,
+              opacity: 0.82,
+              depthTest: true,
+              lit: false,
+              side: THREE.FrontSide,
+              projectToModel: true,
+              surfaceOffset: 0.004,
+              position: [0.405, 0.51, 0.32],
+              rotation: [-0.06, -0.1, -0.11],
+              renderOrder: 1001
+            }, modelMeshes);
+          }
+
+          if (modelEl.getObject3D("mesh")) {
+            createShirtDecals();
+          } else {
+            modelEl.addEventListener("model-loaded", createShirtDecals);
+          }
+        }
+      });
+
+      AFRAME.registerComponent("remove-shirt-pocket", {
+        init: function () {
+          this.el.addEventListener("model-loaded", function () {
+            this.el.object3D.traverse(function (child) {
+              var materials = Array.isArray(child.material) ? child.material : [child.material];
+              var shouldHideMaterial = materials.some(function (material) {
+                if (!material || !material.name) return false;
+                return /Pocket|Button/.test(material.name);
+              });
+              if (
+                shouldHideMaterial ||
+                child.name === "Object_3" ||
+                child.name === "Object_10" ||
+                child.name === "Object_16"
+              ) {
+                child.visible = false;
+              }
+            });
+          }.bind(this));
+        }
+      });
+
+      AFRAME.registerComponent("shirt-wind-anchor", {
+        init: function () {
+          this.baseRotation = this.el.object3D.rotation.clone();
+          this.basePosition = this.el.object3D.position.clone();
+          this.baseScale = this.el.object3D.scale.clone();
+          this.spinStart = null;
+          this.spinDuration = 1400;
+          this.hovered = false;
+          this.hoverScale = 0;
+          this.pointer = new THREE.Vector2();
+          this.raycaster = new THREE.Raycaster();
+          this.modelMeshes = [];
+          this.handlePointerMove = this.updateModelHover.bind(this);
+          this.handlePointerLeave = this.endModelHover.bind(this);
+          this.attachHoverTracking = function () {
+            this.hoverTarget = this.el.sceneEl.canvas || this.el.sceneEl;
+            this.hoverTarget.addEventListener("mousemove", this.handlePointerMove);
+            this.hoverTarget.addEventListener("mouseleave", this.handlePointerLeave);
+          }.bind(this);
+          if (this.el.sceneEl.canvas) {
+            this.attachHoverTracking();
+          } else {
+            this.el.sceneEl.addEventListener("render-target-loaded", this.attachHoverTracking);
+          }
+          var modelEl = this.el.querySelector("[gltf-model]");
+          var collectModelMeshes = function () {
+            this.modelMeshes = [];
+            modelEl.object3D.traverse(function (child) {
+              if (child.isMesh && child.visible) this.modelMeshes.push(child);
+            }.bind(this));
+          }.bind(this);
+          if (modelEl.getObject3D("mesh")) {
+            collectModelMeshes();
+          } else {
+            modelEl.addEventListener("model-loaded", collectModelMeshes);
+          }
+        },
+        startModelHover: function () {
+          this.hovered = true;
+          if (this.spinStart !== null) return;
+          this.spinStart = performance.now();
+        },
+        endModelHover: function () {
+          this.hovered = false;
+          if (this.hoverTarget) this.hoverTarget.style.cursor = "";
+        },
+        updateModelHover: function (event) {
+          if (!this.modelMeshes.length || !this.el.sceneEl.camera) return;
+          var rect = this.hoverTarget.getBoundingClientRect();
+          this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          this.raycaster.setFromCamera(this.pointer, this.el.sceneEl.camera);
+          var hits = this.raycaster.intersectObjects(this.modelMeshes, true);
+          if (hits.length) {
+            if (!this.hovered) this.startModelHover();
+            this.hoverTarget.style.cursor = "pointer";
+          } else {
+            this.endModelHover();
+          }
+        },
+        easeSpin: function (t) {
+          var inverse = 1 - t;
+          return 3 * inverse * inverse * t * 0.08 + 3 * inverse * t * t * 0.92 + t * t * t;
+        },
+        tick: function (time) {
+          var t = time / 1000;
+          var spinOffset = 0;
+          if (this.spinStart !== null) {
+            var progress = Math.min((performance.now() - this.spinStart) / this.spinDuration, 1);
+            spinOffset = this.easeSpin(progress) * Math.PI * 2;
+            if (progress >= 1) {
+              this.spinStart = null;
+              spinOffset = 0;
+            }
+          }
+          this.el.object3D.rotation.x = this.baseRotation.x + Math.sin(t * 1.15) * 0.025;
+          this.el.object3D.rotation.y = this.baseRotation.y + Math.sin(t * 0.72) * 0.085 + spinOffset;
+          this.el.object3D.rotation.z = this.baseRotation.z + Math.sin(t * 0.95) * 0.045;
+          this.el.object3D.position.x = this.basePosition.x + Math.sin(t * 0.8) * 0.025;
+          this.hoverScale += ((this.hovered ? 1 : 0) - this.hoverScale) * 0.08;
+          var scale = 1 + this.hoverScale * 0.055;
+          this.el.object3D.scale.set(
+            this.baseScale.x * scale,
+            this.baseScale.y * scale,
+            this.baseScale.z * scale
+          );
+        },
+        remove: function () {
+          if (this.hoverTarget) {
+            this.hoverTarget.removeEventListener("mousemove", this.handlePointerMove);
+            this.hoverTarget.removeEventListener("mouseleave", this.handlePointerLeave);
+            this.hoverTarget.style.cursor = "";
+          }
+          this.el.sceneEl.removeEventListener("render-target-loaded", this.attachHoverTracking);
+        }
+      });
+    </script>
     <style>
       @font-face {
         font-family: "ABCDiatypeRoundedEdu";
@@ -80,7 +400,7 @@
         align-items: center;
         justify-content: center;
         height: 56px;
-        width: 122px;
+        width: 116px;
         padding: 0;
         border: 0;
         border-radius: 999px;
@@ -132,7 +452,7 @@
       }
 
       .view-toggle.is-3d .toggle-knob {
-        transform: translate(63px, -50%);
+        transform: translate(57px, -50%);
       }
 
       .view-toggle.is-3d .toggle-label-3d {
@@ -200,6 +520,10 @@
         display: none;
       }
 
+      .intro-continuation[hidden] {
+        display: none;
+      }
+
       .read-more {
         appearance: none;
         border: 0;
@@ -212,7 +536,7 @@
       }
 
       .read-more:hover {
-        color: var(--muted);
+        color: #000000;
       }
 
       .email-link {
@@ -224,6 +548,30 @@
       .email-link:focus {
         color: rgb(0, 0, 255);
         text-decoration: none;
+      }
+
+      .phone-link {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .phone-link:hover,
+      .phone-link:focus {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .footer .phone-link {
+        color: #ffffff;
+      }
+
+      .footer .phone-link:hover,
+      .footer .phone-link:focus {
+        color: rgb(0, 0, 255);
+      }
+
+      .address-break-phone {
+        display: block;
       }
 
       .facts {
@@ -277,7 +625,7 @@
         width: 108px;
         height: 108px;
         border-radius: 50%;
-        background: #5cff4f;
+        background: #25ff00;
       }
 
       .icon-people {
@@ -298,6 +646,105 @@
         height: 96px;
         background: #a6a6a6;
         clip-path: polygon(50% 0, 100% 100%, 0 100%);
+      }
+
+      .landscape {
+        position: relative;
+        width: 100vw;
+        height: 112vh;
+        min-height: 700px;
+        overflow: hidden;
+      }
+
+      .landscape img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .shirt-wrap {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: auto;
+      }
+
+      .shirt-scene {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+      }
+
+      .shirt-scene canvas {
+        background: transparent !important;
+      }
+
+      .a-enter-vr,
+      .a-enter-ar,
+      .a-orientation-modal {
+        display: none !important;
+      }
+
+      .values {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: center;
+        align-content: center;
+        gap: clamp(40px, 7vw, 120px);
+        min-height: calc(100vh - 184px);
+        padding: clamp(48px, 6.5vw, 86px) clamp(32px, 6vw, 84px);
+        background: #ffffff;
+      }
+
+      .value {
+        display: grid;
+        justify-items: center;
+        align-items: start;
+        gap: clamp(12px, 1.7vw, 22px);
+        text-align: center;
+        transform: translateY(-10px);
+      }
+
+      .value-icon {
+        width: clamp(116px, 12.5vw, 180px);
+        height: clamp(116px, 12.5vw, 180px);
+        color: #000000;
+        display: block;
+      }
+
+      .watchful-pupil {
+        animation: watchful-pupil-drift 12s ease-in-out infinite;
+        transform-box: view-box;
+        transform-origin: 60px 60px;
+      }
+
+      @keyframes watchful-pupil-drift {
+        0%,
+        22%,
+        100% {
+          transform: translate(0, 0);
+        }
+
+        34%,
+        46% {
+          transform: translate(2px, -1px);
+        }
+
+        58%,
+        70% {
+          transform: translate(-1.5px, 1.5px);
+        }
+
+        82%,
+        92% {
+          transform: translate(-2px, -0.5px);
+        }
+      }
+
+      .value-label {
+        font-size: clamp(30px, 3.7vw, 52px);
+        line-height: 0.98;
       }
 
       .footer {
@@ -328,7 +775,7 @@
         }
 
         .view-toggle {
-          width: 122px;
+          width: 116px;
           height: 56px;
           font-size: 24px;
         }
@@ -340,7 +787,7 @@
         }
 
         .content {
-          padding-inline: 24px;
+          padding: 38px 24px 50px;
         }
 
         .intro {
@@ -349,12 +796,14 @@
 
         .facts {
           grid-template-columns: 1fr;
-          gap: 34px;
+          gap: 22px;
+          margin-top: 42px;
         }
 
         .fact {
           grid-template-columns: 86px minmax(0, 1fr);
-          gap: 26px;
+          gap: 18px;
+          min-height: 96px;
         }
 
         .fact > [class^="icon-"] {
@@ -366,12 +815,67 @@
         }
 
         .footer {
-          grid-template-columns: 1fr;
-          justify-items: start;
+          grid-template-columns: minmax(0, 1fr) auto;
+          justify-items: stretch;
+          gap: 14px;
+          min-height: 92px;
+          padding: 14px 18px;
         }
 
         .footer-logo {
-          justify-self: center;
+          justify-self: end;
+          width: clamp(86px, 23vw, 118px);
+        }
+
+        .address {
+          font-size: clamp(12px, 3.25vw, 15px);
+          line-height: 1.18;
+        }
+
+        .address-break-phone {
+          display: block;
+        }
+
+        .phone-link {
+          color: #000000;
+          text-decoration: none;
+        }
+
+        .footer .phone-link {
+          color: #ffffff;
+        }
+
+        .footer .phone-link:hover,
+        .footer .phone-link:focus {
+          color: rgb(0, 0, 255);
+        }
+
+        .landscape {
+          height: 68vh;
+          min-height: 500px;
+        }
+
+        .values {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          align-items: center;
+          gap: 18px;
+          min-height: auto;
+          padding: 42px 24px 48px;
+        }
+
+        .value {
+          gap: 10px;
+          transform: translateY(-4px);
+        }
+
+        .value-icon {
+          width: clamp(86px, 24vw, 114px);
+          height: clamp(86px, 24vw, 114px);
+        }
+
+        .value-label {
+          font-size: clamp(22px, 7.5vw, 30px);
+          line-height: 0.98;
         }
       }
     </style>
@@ -396,8 +900,8 @@
         <span class="toggle-label toggle-label-2d">2D</span>
       </button>
       <div class="zoom-controls" id="zoomControls" aria-label="Map and world zoom controls">
-        <button class="zoom-button" id="zoomIn" type="button" aria-label="Zoom in">+</button>
         <button class="zoom-button" id="zoomOut" type="button" aria-label="Zoom out">−</button>
+        <button class="zoom-button" id="zoomIn" type="button" aria-label="Zoom in">+</button>
       </div>
     </section>
 
@@ -405,14 +909,12 @@
       <section class="intro" aria-label="About Sun Eden">
         <p>
           Sun Eden is a haven for alternative modes of living. Founded by a number of dedicated environmentalists in 1995, it is now running its third decade of ever growing existence. Its vision is to grow into a sustainable, financially viable facility of local and international appeal, placing Sun Eden among the world’s leading sustainable resorts.
+          <span class="intro-continuation" id="introContinuation" hidden>People from all walks of life are welcome to experience the exhilarating freedom of being themselves, in nature, without judgement or prejudice. New residents quickly adapt to the rhythms of communal living and often choose to extend their stay. Annually upgraded facilities are provided.</span>
           <button class="read-more" id="readMore" type="button">Read more...</button>
         </p>
         <div class="intro-extra" id="introExtra" hidden>
           <p>
-            People from all walks of life are welcome to experience the exhilarating freedom of being themselves, in nature, without judgement or prejudice. New residents quickly adapt to the rhythms of communal living and often choose to extend their stay. Annually upgraded facilities are provided.
-          </p>
-          <p>
-            As modern society continues to expand, Sun Eden strives to be the friendliest place. You will experience the friendly atmosphere while sitting around the campfire. Firewood and logs are supplied by Sun Eden. You bring your own meat and marshmallows. The following activities are available for residents: bird watching, gardening, beach ball, fishing, river floating, campfire and hiking. Participation is encouraged. The Sun Café restaurant is now privately run and operates independently from Sun Eden. Sun Café is open daily over the holiday season. Please find the menu on the below tab. Contact us on mobile 060 652 9002 and e-mail <a class="email-link" href="mailto:sunedencafe@gmail.com?subject=Additional%20Information">sunedencafe@gmail.com</a> if you require any further information.
+            As modern society continues to expand, Sun Eden strives to be the friendliest place. You will experience the friendly atmosphere while sitting around the campfire. Firewood and logs are supplied by Sun Eden. You bring your own meat and marshmallows. The following activities are available for residents: bird watching, gardening, beach ball, fishing, river floating, campfire and hiking. Participation is encouraged. The Sun Café restaurant is now privately run and operates independently from Sun Eden. Sun Café is open daily over the holiday season. Please find the menu on the below tab. Contact us on mobile <a class="phone-link" href="tel:+27606529002">060 652 9002</a> and e-mail <a class="email-link" href="mailto:sunedencafe@gmail.com?subject=Additional%20Information">sunedencafe@gmail.com</a> if you require any further information.
           </p>
           <p>
             Bask in the sun along the riverside or relax in the shade of our Bushveld trees. The day-to-day pressures of modern society are easily forgotten in this setting of natural beauty and tranquillity. Sun Eden is home to more than 100 species of birds, 4 types of buck, chickens, the large Banded Mongoose family, giraffes, grazing cattle and Bush Babies. Wildlife conservation is of paramount importance. Residents are reminded to respect quiet hours after sunset. <button class="read-more" id="readLess" type="button">Read Less</button>
@@ -444,11 +946,67 @@
       </section>
     </main>
 
+    <section class="landscape" aria-label="Sun Eden landscape">
+      <img src="./landsape.jpeg" alt="Open green landscape under a bright blue sky" />
+      <div class="shirt-wrap" aria-hidden="true">
+        <a-scene
+          class="shirt-scene"
+          embedded
+          renderer="alpha: true; antialias: true"
+          background="transparent: true"
+          vr-mode-ui="enabled: false">
+          <a-assets>
+            <a-asset-item id="shirtModel" src="./tshirt.glb"></a-asset-item>
+          </a-assets>
+          <a-entity light="type: ambient; intensity: 0.86; color: #e4e4e4"></a-entity>
+          <a-entity light="type: directional; intensity: 0.34; color: #e6e6e6" position="-2 4 5"></a-entity>
+          <a-entity
+            position="0 1.1 -5"
+            rotation="0 -18 0"
+            shirt-wind-anchor>
+            <a-entity gltf-model="#shirtModel" fit-shirt-model="height: 2.12" remove-shirt-pocket></a-entity>
+            <a-entity shirt-logo-decal></a-entity>
+          </a-entity>
+          <a-camera position="0 1.1 0" fov="34" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
+        </a-scene>
+      </div>
+    </section>
+
+    <section class="values" aria-label="Sun Eden values">
+      <div class="value">
+        <svg class="value-icon" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <g transform="translate(0 5)">
+            <circle cx="60" cy="32" r="15" fill="currentColor"></circle>
+            <circle cx="39" cy="68" r="15" fill="currentColor"></circle>
+            <circle cx="81" cy="68" r="15" fill="currentColor"></circle>
+          </g>
+        </svg>
+        <div class="value-label">community<br />orientated</div>
+      </div>
+      <div class="value">
+        <svg class="value-icon" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="60" cy="60" rx="48" ry="29"></ellipse>
+          </g>
+          <circle class="watchful-pupil" cx="60" cy="60" r="21" fill="currentColor"></circle>
+        </svg>
+        <div class="value-label">vigilant<br />neighbours</div>
+      </div>
+      <div class="value">
+        <svg class="value-icon" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="38" y="22" width="44" height="76" rx="12"></rect>
+          </g>
+        </svg>
+        <div class="value-label">phones<br />prohibited</div>
+      </div>
+    </section>
+
     <footer class="footer">
       <address class="address">
         Dinokeng Central, 38 1st Street,<br />
-        Kloppersbos, Pretoria, 0186, South Africa<br />
-        +27 71 658 0165
+        Kloppersbos, Pretoria, 0186, South Africa<br class="address-break-phone" />
+        <a class="phone-link" href="tel:+27716580165">+27 71 658 0165</a>
       </address>
       <img class="footer-logo" src="./Logo.svg" alt="Sun Eden" />
     </footer>
@@ -462,6 +1020,7 @@
       var zoomOut = document.getElementById("zoomOut");
       var readMore = document.getElementById("readMore");
       var readLess = document.getElementById("readLess");
+      var introContinuation = document.getElementById("introContinuation");
       var introExtra = document.getElementById("introExtra");
       var showingWorld = false;
 
@@ -522,11 +1081,13 @@
       });
 
       readMore.addEventListener("click", function () {
+        introContinuation.hidden = false;
         introExtra.hidden = false;
         readMore.hidden = true;
       });
 
       readLess.addEventListener("click", function () {
+        introContinuation.hidden = true;
         introExtra.hidden = true;
         readMore.hidden = false;
       });
