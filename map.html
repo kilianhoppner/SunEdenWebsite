@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Map </title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="./ABCDiatypeRoundedEdu-Light.otf" as="font" type="font/otf" crossorigin />
     <style>
-      @font-face {
-        font-family: "Sun Eden";
-        src: url("./SunEden-Regular.otf") format("opentype");
-      }
-
       @font-face {
         font-family: "ABCDiatypeRoundedEdu";
         src: url("./ABCDiatypeRoundedEdu-Light.otf") format("opentype");
+        font-display: swap;
       }
 
       html,
@@ -26,6 +23,7 @@
 
       body {
         font-family: "ABCDiatypeRoundedEdu", Arial, sans-serif;
+        transition: background-color 0.3s linear;
       }
 
       .map {
@@ -49,6 +47,7 @@
 
       .map-label {
         fill: #000000;
+        font-family: "ABCDiatypeRoundedEdu", Arial, sans-serif;
         font-size: 34px;
         paint-order: stroke;
         stroke: #ffffff;
@@ -58,6 +57,47 @@
 
       .marker-label {
         dominant-baseline: hanging;
+      }
+
+      #mapGround,
+      #mapRiver,
+      .map-sun,
+      .map-moon,
+      #mapNightFires,
+      .campfire-night-glow,
+      .campfire-night-core,
+      #mapHelicopter {
+        transition: opacity 0.18s linear;
+      }
+
+      #mapNightFires,
+      .campfire-night-glow,
+      .campfire-night-core,
+      #mapHelicopter {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .campfire-night-glow {
+        fill: #ff8a00;
+        fill-opacity: 0.34;
+      }
+
+      .campfire-night-core {
+        fill: #fffb70;
+      }
+
+      .map-night-fire .fire-glow {
+        fill: #ff8a00;
+        opacity: 0.34;
+      }
+
+      .map-night-fire .fire-core {
+        fill: #fffb70;
+      }
+
+      .map-night-fire .fire-flame {
+        fill: #ff6800;
       }
 
       #mobileMapRotation {
@@ -127,7 +167,11 @@
         </symbol>
 
         <symbol id="campfireIcon" viewBox="0 0 80 100">
-          <polygon points="40,0 76,98 4,98" fill="#ff8500"></polygon>
+          <polygon points="40,0 76,98 4,98" fill="#ff6800"></polygon>
+        </symbol>
+
+        <symbol id="campfireCoreIcon" viewBox="0 0 80 100">
+          <polygon points="40,22 58,98 22,98" fill="#fffb70"></polygon>
         </symbol>
 
         <symbol id="gardenIcon" viewBox="0 0 130 70">
@@ -210,10 +254,11 @@
       <!-- Map body -->
       <g id="mobileMapRotation">
       <g id="worldMap" transform="translate(960 540) scale(0.94) translate(-960 -582)">
-        <rect x="30" y="190" width="1860" height="835" rx="402" ry="402" fill="#25ff00"></rect>
+        <rect id="mapGround" x="30" y="190" width="1860" height="835" rx="402" ry="402" fill="#25ff00"></rect>
 
         <g clip-path="url(#groundClip)">
           <path
+            id="mapRiver"
             d="M -40 621
                C 150 590, 250 540, 418 535
                C 520 535, 570 570, 635 620
@@ -261,76 +306,46 @@
         </path>
 
         <g clip-path="url(#groundClip)" mask="url(#riverMask)">
-          <g>
-            <animateMotion dur="84s" begin="-6s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="84" data-offset="6">
             <use href="#fishIcon" x="-26" y="-29" width="52" height="22" style="color: #ff6b6b"></use>
             <use href="#fishIcon" x="-26" y="-29" width="52" height="22" style="color: #ff6b6b" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="92s" begin="-18s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="92" data-offset="18">
             <use href="#fishIcon" x="-25" y="12" width="50" height="22" style="color: #ff922b"></use>
             <use href="#fishIcon" x="-25" y="12" width="50" height="22" style="color: #ff922b" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="88s" begin="-30s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="88" data-offset="30">
             <use href="#fishIcon" x="-24" y="-10" width="48" height="21" style="color: #ffd43b"></use>
             <use href="#fishIcon" x="-24" y="-10" width="48" height="21" style="color: #ffd43b" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="98s" begin="-42s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="98" data-offset="42">
             <use href="#fishIcon" x="-25" y="25" width="50" height="21" style="color: #8ce99a"></use>
             <use href="#fishIcon" x="-25" y="25" width="50" height="21" style="color: #8ce99a" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="94s" begin="-54s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="94" data-offset="54">
             <use href="#fishIcon" x="-26" y="-39" width="52" height="22" style="color: #38d9a9"></use>
             <use href="#fishIcon" x="-26" y="-39" width="52" height="22" style="color: #38d9a9" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="90s" begin="-66s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="90" data-offset="66">
             <use href="#fishIcon" x="-24" y="-2" width="48" height="21" style="color: #0051b8"></use>
             <use href="#fishIcon" x="-24" y="-2" width="48" height="21" style="color: #0051b8" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="100s" begin="-78s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="100" data-offset="78">
             <use href="#fishIcon" x="-26" y="33" width="52" height="22" style="color: #9775fa"></use>
             <use href="#fishIcon" x="-26" y="33" width="52" height="22" style="color: #9775fa" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="96s" begin="-84s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="96" data-offset="84">
             <use href="#fishIcon" x="-25" y="-20" width="50" height="22" style="color: #f06595"></use>
             <use href="#fishIcon" x="-25" y="-20" width="50" height="22" style="color: #f06595" transform="translate(-1860 0)"></use>
           </g>
-          <g>
-            <animateMotion dur="104s" begin="-24s" repeatCount="indefinite" rotate="0">
-              <mpath href="#fishRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="fishRoute" data-duration="104" data-offset="24">
             <use href="#fishIcon" x="-24" y="21" width="48" height="21" style="color: #94d82d"></use>
             <use href="#fishIcon" x="-24" y="21" width="48" height="21" style="color: #94d82d" transform="translate(-1860 0)"></use>
           </g>
         </g>
 
         <g clip-path="url(#groundClip)">
-          <g>
-            <animateMotion dur="126s" begin="-38s" repeatCount="indefinite" rotate="0">
-              <mpath href="#riverFloatRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="riverFloatRoute" data-duration="126" data-offset="38">
             <use href="#beachBallIcon" x="-33" y="-59" width="66" height="66"></use>
             <text class="map-label marker-label" x="0" y="14" text-anchor="middle">beach ball</text>
             <g transform="translate(-1860 0)">
@@ -338,10 +353,7 @@
               <text class="map-label marker-label" x="0" y="14" text-anchor="middle">beach ball</text>
             </g>
           </g>
-          <g>
-            <animateMotion dur="168s" begin="-82s" repeatCount="indefinite" rotate="0">
-              <mpath href="#riverFloatRoute"></mpath>
-            </animateMotion>
+          <g class="map-motion" data-path="riverFloatRoute" data-duration="168" data-offset="82">
             <use href="#floatieIcon" x="-37" y="-60" width="74" height="74"></use>
             <text class="map-label marker-label" x="0" y="14" text-anchor="middle">floatie</text>
             <g transform="translate(-1860 0)">
@@ -384,7 +396,9 @@
         </g>
 
         <g transform="translate(1448 425)">
+          <circle class="campfire-night-glow" cx="0" cy="-42" r="58"></circle>
           <use class="mobile-counter-rotate" href="#campfireIcon" x="-28" y="-78" width="56" height="73"></use>
+          <use class="mobile-counter-rotate campfire-night-core" href="#campfireCoreIcon" x="-28" y="-78" width="56" height="73"></use>
           <text class="map-label marker-label" x="0" y="14" text-anchor="middle">campfire</text>
         </g>
 
@@ -408,14 +422,62 @@
           <text class="map-label marker-label" x="0" y="18" text-anchor="middle">chair</text>
         </g>
 
-        <g class="desktop-sky-marker" transform="translate(1790 146)">
+        <g class="desktop-sky-marker map-sun" transform="translate(1790 146)">
           <circle cx="0" cy="-34" r="58" fill="#fff600"></circle>
           <text class="map-label marker-label" x="0" y="48" text-anchor="middle">sun</text>
         </g>
 
-        <g class="desktop-sky-marker" transform="translate(130 146)">
+        <g class="desktop-sky-marker map-moon" transform="translate(130 146)">
           <circle cx="0" cy="-34" r="58" fill="#b9b9b9"></circle>
           <text class="map-label marker-label" x="0" y="48" text-anchor="middle">moon</text>
+        </g>
+
+        <g id="mapNightFires">
+          <g class="map-night-fire" transform="translate(465 360) scale(0.62)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(660 805) scale(0.58)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(940 900) scale(0.5)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(1218 760) scale(0.56)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(1640 810) scale(0.6)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(305 800) scale(0.48)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(1370 282) scale(0.5)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(1038 294) scale(0.5)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
+          <g class="map-night-fire" transform="translate(815 482) scale(0.46)">
+            <circle class="fire-glow" cx="0" cy="-51" r="54"></circle>
+            <polygon class="fire-flame" points="0,-84 30,-18 -30,-18"></polygon>
+            <polygon class="fire-core" points="0,-62 15,-18 -15,-18"></polygon>
+          </g>
         </g>
 
         <!-- Moving animals, simplified from their index.html movement territories. -->
@@ -424,70 +486,43 @@
         <path id="chickenRouteC" d="M 1088 440 C 1125 470, 1190 452, 1205 410 C 1165 392, 1100 400, 1088 440 Z" fill="none" stroke="none"></path>
         <path id="chickenRouteD" d="M 1255 432 C 1300 405, 1314 350, 1275 326 C 1244 355, 1228 410, 1255 432 Z" fill="none" stroke="none"></path>
         <path id="butterflyRoute" d="M 925 366 C 948 330, 1002 334, 1010 380 C 1004 428, 938 430, 918 392 C 908 378, 912 366, 925 366 Z" fill="none" stroke="none"></path>
-        <g>
-          <animateMotion dur="27s" repeatCount="indefinite" rotate="0">
-            <mpath href="#chickenRouteA"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="chickenRouteA" data-duration="27" data-offset="0">
           <use href="#chickenIcon" x="-13" y="-13" width="26" height="26"></use>
         </g>
-        <g>
-          <animateMotion dur="31s" repeatCount="indefinite" rotate="0">
-            <mpath href="#chickenRouteB"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="chickenRouteB" data-duration="31" data-offset="0">
           <use href="#chickenIcon" x="-12" y="-12" width="24" height="24"></use>
         </g>
-        <g>
-          <animateMotion dur="30s" repeatCount="indefinite" rotate="0">
-            <mpath href="#chickenRouteC"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="chickenRouteC" data-duration="30" data-offset="0">
           <use href="#chickenIcon" x="-12" y="-12" width="24" height="24"></use>
         </g>
-        <g>
-          <animateMotion dur="33s" repeatCount="indefinite" rotate="0">
-            <mpath href="#chickenRouteD"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="chickenRouteD" data-duration="33" data-offset="0">
           <use href="#chickenIcon" x="-12" y="-12" width="24" height="24"></use>
         </g>
 
-        <g>
-          <animateMotion dur="20s" repeatCount="indefinite" rotate="0">
-            <mpath href="#butterflyRoute"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="butterflyRoute" data-duration="20" data-offset="0">
           <use href="#butterflyIcon" x="-10" y="-10" width="20" height="20"></use>
         </g>
 
         <path id="cowRoute" d="M 1118 220 C 1190 184, 1300 196, 1322 254 C 1280 296, 1164 306, 1108 266 C 1086 248, 1092 230, 1118 220 Z" fill="none" stroke="none"></path>
-        <g>
-          <animateMotion dur="50s" repeatCount="indefinite" rotate="0">
-            <mpath href="#cowRoute"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="cowRoute" data-duration="50" data-offset="0">
           <use href="#cowIcon" x="-64" y="-30" width="128" height="60"></use>
           <text class="map-label marker-label" x="0" y="38" text-anchor="middle">cow</text>
         </g>
 
         <path id="giraffeRoute" d="M 765 662 C 850 625, 1050 620, 1145 666 C 1048 704, 865 704, 765 662 Z" fill="none" stroke="none"></path>
-        <g>
-          <animateMotion dur="52s" repeatCount="indefinite" rotate="0">
-            <mpath href="#giraffeRoute"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="giraffeRoute" data-duration="52" data-offset="0">
           <use class="mobile-counter-rotate" href="#giraffeIcon" x="-44" y="-70" width="88" height="126"></use>
           <text class="map-label marker-label" x="0" y="62" text-anchor="middle">giraffe</text>
         </g>
 
         <path id="birdOrbitRoute" d="M 960 150 C 1335 150, 1665 350, 1665 600 C 1665 850, 1335 1010, 960 1000 C 585 1010, 255 850, 255 600 C 255 350, 585 150, 960 150 Z" fill="none" stroke="none"></path>
-        <g>
-          <animateMotion dur="52s" repeatCount="indefinite" rotate="0">
-            <mpath href="#birdOrbitRoute"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="birdOrbitRoute" data-duration="52" data-offset="0">
           <use class="mobile-counter-rotate" href="#birdIcon" x="-31" y="-19" width="62" height="38"></use>
           <text class="map-label marker-label" x="0" y="34" text-anchor="middle">bird</text>
         </g>
 
         <path id="mountainBirdRoute" d="M 330 780 C 420 720, 530 790, 500 890 C 450 985, 300 930, 330 780 Z" fill="none" stroke="none"></path>
-        <g>
-          <animateMotion dur="32s" repeatCount="indefinite" rotate="0">
-            <mpath href="#mountainBirdRoute"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="mountainBirdRoute" data-duration="32" data-offset="0">
           <use class="mobile-counter-rotate" href="#birdIcon" x="-31" y="-19" width="62" height="38"></use>
           <text class="map-label marker-label" x="0" y="30" text-anchor="middle">bird</text>
         </g>
@@ -495,29 +530,25 @@
         <path id="helicopterRoute" d="M 1370 270 C 1020 210, 710 420, 820 640 C 930 850, 1300 930, 1510 770 C 1695 600, 1620 335, 1370 270 Z" fill="none" stroke="none"></path>
 
         <!-- Balloon is high, helicopter below is drawn after it so night patrol sits on top. -->
-        <g>
-          <animateMotion dur="90s" repeatCount="indefinite" rotate="0">
-            <mpath href="#balloonRoute"></mpath>
-          </animateMotion>
+        <g class="map-motion" data-path="balloonRoute" data-duration="90" data-offset="0">
           <use class="mobile-counter-rotate" href="#balloonIcon" x="-60" y="-80" width="120" height="160"></use>
           <text class="map-label marker-label" x="0" y="94" text-anchor="middle">hot air balloon</text>
         </g>
 
         <!-- Drawn last so it appears above every map element, including the balloon. -->
-        <g>
-          <animateMotion dur="48s" repeatCount="indefinite" rotate="0">
-            <mpath href="#helicopterRoute"></mpath>
-          </animateMotion>
-          <use class="mobile-counter-rotate" href="#helicopterIcon" x="-70" y="-36" width="140" height="72"></use>
-          <text class="map-label marker-label" x="0" y="46" text-anchor="middle">helicopter</text>
+        <g id="mapHelicopterStage">
+          <g id="mapHelicopter" class="map-motion" data-path="helicopterRoute" data-duration="48" data-offset="0">
+            <use class="mobile-counter-rotate" href="#helicopterIcon" x="-70" y="-36" width="140" height="72"></use>
+            <text class="map-label marker-label" x="0" y="46" text-anchor="middle">helicopter</text>
+          </g>
         </g>
       </g>
       </g>
-      <g class="mobile-sky-marker" transform="translate(1360 -220)">
+      <g class="mobile-sky-marker map-sun" transform="translate(1360 -220)">
         <circle cx="0" cy="-34" r="58" fill="#fff600"></circle>
         <text class="map-label marker-label" x="0" y="48" text-anchor="middle">sun</text>
       </g>
-      <g class="mobile-sky-marker" transform="translate(513 -220)">
+      <g class="mobile-sky-marker map-moon" transform="translate(513 -220)">
         <circle cx="0" cy="-34" r="58" fill="#b9b9b9"></circle>
         <text class="map-label marker-label" x="0" y="48" text-anchor="middle">moon</text>
       </g>
@@ -534,6 +565,24 @@
         y: baseViewBox.y + baseViewBox.height / 2
       };
       var dragState = null;
+      var NIGHT_MODE_DELAY_MS = 6000;
+      var NIGHT_MODE_TRANSITION_MS = 9500;
+      var NIGHT_MODE_DAY_HOLD_MS = 9000;
+      var NIGHT_MODE_NIGHT_HOLD_MS = 45000;
+      var mapNightElapsedMs = 0;
+      var lastNightFrameMs = performance.now();
+      var mapGround = document.querySelector("#mapGround");
+      var mapRiver = document.querySelector("#mapRiver");
+      var mapNightFires = document.querySelector("#mapNightFires");
+      var mapCampfireGlow = document.querySelector(".campfire-night-glow");
+      var mapCampfireCore = document.querySelector(".campfire-night-core");
+      var mapHelicopterStage = document.querySelector("#mapHelicopterStage");
+      var mapHelicopter = document.querySelector("#mapHelicopter");
+      var mapSunMarkers = document.querySelectorAll(".map-sun");
+      var mapMoonMarkers = document.querySelectorAll(".map-moon");
+      var mapMotionItems = [];
+      var mapMotionElapsedMs = 0;
+      var lastMapMotionFrameMs = performance.now();
 
       function getBaseViewBox() {
         return mobileMapQuery.matches ? mobileBaseViewBox : desktopBaseViewBox;
@@ -618,6 +667,17 @@
           icon.setAttribute("transform", "rotate(-90 " + centerX + " " + centerY + ")");
         });
 
+        document.querySelectorAll(".map-night-fire").forEach(function (fire) {
+          if (!fire.dataset.baseTransform) {
+            fire.dataset.baseTransform = fire.getAttribute("transform") || "";
+          }
+          if (!isMobile) {
+            fire.setAttribute("transform", fire.dataset.baseTransform);
+            return;
+          }
+          fire.setAttribute("transform", fire.dataset.baseTransform + " rotate(-90)");
+        });
+
         document.querySelectorAll("#mobileMapRotation .map-label").forEach(function (label) {
           storeOriginalLabelPosition(label);
           if (!isMobile) {
@@ -639,6 +699,177 @@
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
+      }
+
+      function smoothstep(value, min, max) {
+        var t = clamp((value - min) / Math.max(0.0001, max - min), 0, 1);
+        return t * t * (3 - 2 * t);
+      }
+
+      function createMapMotionItems() {
+        return Array.prototype.slice
+          .call(document.querySelectorAll(".map-motion"))
+          .map(function (el) {
+            var path = document.getElementById(el.dataset.path);
+            var duration = parseFloat(el.dataset.duration || "0");
+            if (!path || !path.getTotalLength || duration <= 0) return null;
+            try {
+              return {
+                el: el,
+                path: path,
+                pathLength: path.getTotalLength(),
+                duration: duration,
+                offset: parseFloat(el.dataset.offset || "0") || 0
+              };
+            } catch (error) {
+              return null;
+            }
+          })
+          .filter(Boolean);
+      }
+
+      function updateMapMotion() {
+        var seconds = mapMotionElapsedMs / 1000;
+        for (var i = 0; i < mapMotionItems.length; i++) {
+          var item = mapMotionItems[i];
+          var routeTime = (seconds + item.offset) % item.duration;
+          var progress = routeTime / item.duration;
+          var point = item.path.getPointAtLength(progress * item.pathLength);
+          item.el.setAttribute(
+            "transform",
+            "translate(" + point.x.toFixed(2) + " " + point.y.toFixed(2) + ")"
+          );
+        }
+      }
+
+      function animateMapMotion(now) {
+        var deltaMs = Math.max(0, Math.min(now - lastMapMotionFrameMs, 50));
+        lastMapMotionFrameMs = now;
+        mapMotionElapsedMs += deltaMs;
+        updateMapMotion();
+        requestAnimationFrame(animateMapMotion);
+      }
+
+      function getSyncedWorldNightAmount() {
+        var parentDocument;
+        try {
+          if (!window.parent || window.parent === window) return null;
+          parentDocument = window.parent.document;
+        } catch (error) {
+          return null;
+        }
+
+        var frames = parentDocument.querySelectorAll("iframe");
+        for (var i = 0; i < frames.length; i++) {
+          try {
+            if (
+              frames[i].contentWindow &&
+              typeof frames[i].contentWindow.NIGHT_MODE_AMOUNT === "number"
+            ) {
+              return frames[i].contentWindow.NIGHT_MODE_AMOUNT;
+            }
+          } catch (error) {
+            continue;
+          }
+        }
+        return null;
+      }
+
+      function computeFallbackNightAmount(elapsedMs) {
+        var transitionMs = Math.max(1, NIGHT_MODE_TRANSITION_MS);
+        var dayHoldMs = Math.max(0, NIGHT_MODE_DAY_HOLD_MS);
+        var nightHoldMs = Math.max(0, NIGHT_MODE_NIGHT_HOLD_MS);
+        var cycleMs = dayHoldMs + transitionMs + nightHoldMs + transitionMs;
+        var cycleT = elapsedMs - NIGHT_MODE_DELAY_MS;
+        var p = 0;
+
+        if (cycleT >= 0) {
+          cycleT = cycleT % cycleMs;
+          if (cycleT < dayHoldMs) {
+            p = 0;
+          } else if (cycleT < dayHoldMs + transitionMs) {
+            p = (cycleT - dayHoldMs) / transitionMs;
+          } else if (cycleT < dayHoldMs + transitionMs + nightHoldMs) {
+            p = 1;
+          } else {
+            p =
+              1 -
+              (cycleT - dayHoldMs - transitionMs - nightHoldMs) /
+                transitionMs;
+          }
+        }
+
+        return p * p * p * (p * (p * 6 - 15) + 10);
+      }
+
+      function parseHexColor(color) {
+        return {
+          r: parseInt(color.slice(1, 3), 16),
+          g: parseInt(color.slice(3, 5), 16),
+          b: parseInt(color.slice(5, 7), 16)
+        };
+      }
+
+      function toHexChannel(value) {
+        var hex = Math.round(value).toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }
+
+      function mixHexColor(dayColor, nightColor, amount) {
+        var day = parseHexColor(dayColor);
+        var night = parseHexColor(nightColor);
+        return (
+          "#" +
+          toHexChannel(day.r + (night.r - day.r) * amount) +
+          toHexChannel(day.g + (night.g - day.g) * amount) +
+          toHexChannel(day.b + (night.b - day.b) * amount)
+        );
+      }
+
+      function setMarkerOpacity(markers, opacity) {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].style.opacity = opacity;
+        }
+      }
+
+      function applyMapNightMode(amount, now) {
+        var night = clamp(amount, 0, 1);
+        var firePulse = 0.88 + Math.sin(now * 0.007) * 0.08 + Math.sin(now * 0.013 + 1.7) * 0.04;
+        var fireOpacity = clamp(night * firePulse, 0, 1);
+        var helicopterOpacity = smoothstep(night, 0.001, 0.24);
+        var helicopterEntry = smoothstep(night, 0.02, 1);
+        var helicopterLift = -1500 * (1 - helicopterEntry);
+
+        document.body.style.backgroundColor = mixHexColor("#f1ede6", "#ff7a00", night);
+        if (mapGround) mapGround.setAttribute("fill", mixHexColor("#25ff00", "#58b62f", night));
+        if (mapRiver) mapRiver.setAttribute("stroke", mixHexColor("#39bee8", "#1d5d7c", night));
+        if (mapNightFires) mapNightFires.style.opacity = fireOpacity;
+        if (mapCampfireGlow) mapCampfireGlow.style.opacity = fireOpacity;
+        if (mapCampfireCore) mapCampfireCore.style.opacity = fireOpacity;
+        if (mapHelicopterStage) {
+          mapHelicopterStage.setAttribute(
+            "transform",
+            "translate(0 " + helicopterLift.toFixed(2) + ")"
+          );
+        }
+        if (mapHelicopter) mapHelicopter.style.opacity = helicopterOpacity;
+        setMarkerOpacity(mapSunMarkers, clamp(1 - night * 1.2, 0, 1));
+        setMarkerOpacity(mapMoonMarkers, clamp((night - 0.08) / 0.82, 0, 1));
+      }
+
+      function animateMapNightMode(now) {
+        var deltaMs = Math.max(0, now - lastNightFrameMs);
+        lastNightFrameMs = now;
+        mapNightElapsedMs += deltaMs;
+
+        var syncedNightAmount = getSyncedWorldNightAmount();
+        var nightAmount =
+          syncedNightAmount === null
+            ? computeFallbackNightAmount(mapNightElapsedMs)
+            : syncedNightAmount;
+
+        applyMapNightMode(nightAmount, now);
+        requestAnimationFrame(animateMapNightMode);
       }
 
       function applyMapViewBox() {
@@ -720,6 +951,10 @@
 
       applyMobileMarkerTransforms();
       applyMapViewBox();
+      mapMotionItems = createMapMotionItems();
+      updateMapMotion();
+      requestAnimationFrame(animateMapMotion);
+      requestAnimationFrame(animateMapNightMode);
 
     </script>
   </body>
