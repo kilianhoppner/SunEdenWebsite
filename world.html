@@ -17,6 +17,10 @@
         display: block;
         height: 100%;
         width: 100%;
+        touch-action: pan-y;
+      }
+      canvas {
+        touch-action: pan-y !important;
       }
     </style>
 
@@ -7517,7 +7521,7 @@
         position="0 2.4 4"
         rotation="-8 0 0"
         camera="active: true; fov: 95; near: 0.01; far: 1000"
-        look-controls
+        look-controls="touchEnabled: false"
         wheel-dolly-zoom="minDistance: 5; maxDistance: 46; sensitivity: 0.038; focusX: 0; focusY: 1; focusZ: -15">
       </a-entity>
     </a-scene>
