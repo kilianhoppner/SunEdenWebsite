@@ -2988,9 +2988,8 @@
           ].forEach(function (p) {
             addFisherSphere(head, p[0] + " " + p[1] + " " + p[2], String(p[3]), null, fisherMat, p[4]);
           });
-          addFisherSphere(head, "0 " + (0.13 + LONG_HAIR_Y_LIFT) + " -0.015", String(LONG_HAIR_RADIUS.brim), longHairScaleStr("brim"), hairMat, "#4A3728");
-          addFisherSphere(head, "0 " + (0.07 + LONG_HAIR_Y_LIFT) + " -0.06", String(LONG_HAIR_RADIUS.top), longHairScaleStr("top"), hairMat, "#3D2E22");
-          appendLongHairBunsAframe(head, { brim: "#4A3728", back: "#352818" }, hairMat);
+          addFisherSphere(head, "0 0.13 -0.015", "0.145", "1 0.42 0.9", hairMat, "#4A3728");
+          addFisherSphere(head, "0 0.07 -0.06", "0.08", "1.2 0.55 0.7", hairMat, "#3D2E22");
 
           [-1, 1].forEach(function (side) {
             var arm = document.createElement("a-entity");
@@ -3230,135 +3229,6 @@
         /* Match a-cylinder radial smoothness (A-Frame default ~36) for Three.js humanoids */
         var HUMAN_CYL_RADIAL_SEG = 48;
 
-        /* Upward shift on all long-hair volumes (keeps skin from peeking through side/back gaps) */
-        var LONG_HAIR_Y_LIFT = 0.062;
-        /* ~10% smaller / subtler bulge — shared by floater + straw onlooker */
-        var LONG_HAIR_SIZE = 0.9;
-
-        function longHairR(radius) {
-          return radius * LONG_HAIR_SIZE;
-        }
-
-        function longHairAxis(scaleAxis) {
-          return 1 + (scaleAxis - 1) * LONG_HAIR_SIZE;
-        }
-
-        var LONG_HAIR_RADIUS = {
-          brim: 0.145,
-          top: 0.08,
-          back: longHairR(0.095),
-          sideJoin: longHairR(0.043),
-          rearJoin: longHairR(0.048),
-          sideBackFill: longHairR(0.052)
-        };
-
-        function longHairRadiusStr(key) {
-          return String(LONG_HAIR_RADIUS[key]);
-        }
-
-        /* Long-hair sphere scales — shared positions; keep floater + straw onlooker in sync */
-        var LONG_HAIR_SCALES = {
-          brim: [1, 0.42, 0.9],
-          top: [1.2, 0.55, 0.7],
-          back: [longHairAxis(1.22), longHairAxis(0.88), longHairAxis(0.68)],
-          sideJoin: [longHairAxis(1.18), longHairAxis(1.44), longHairAxis(1.22)],
-          rearJoin: [longHairAxis(1.14), longHairAxis(1.28), longHairAxis(1.04)],
-          sideBackFill: [longHairAxis(1.06), longHairAxis(1.28), longHairAxis(1.1)]
-        };
-
-        function longHairScaleStr(key) {
-          var s = LONG_HAIR_SCALES[key];
-          return s[0] + " " + s[1] + " " + s[2];
-        }
-
-        function applyLongHairScale(mesh, key) {
-          var s = LONG_HAIR_SCALES[key];
-          mesh.scale.set(s[0], s[1], s[2]);
-        }
-
-        /* Repeated long-hair ellipses — shared by long-haired characters */
-        function longHairBunPartsSpec() {
-          var lift = LONG_HAIR_Y_LIFT;
-          var arc = [
-            { x: -0.118, z: 0.006 },
-            { x: -0.113, z: 0.032 },
-            { x: -0.101, z: 0.057 },
-            { x: -0.08, z: 0.081 },
-            { x: -0.051, z: 0.101 },
-            { x: -0.018, z: 0.114 },
-            { x: 0.018, z: 0.114 },
-            { x: 0.051, z: 0.101 },
-            { x: 0.08, z: 0.081 },
-            { x: 0.101, z: 0.057 },
-            { x: 0.113, z: 0.032 },
-            { x: 0.118, z: 0.006 }
-          ];
-          return arc.map(function (part, idx) {
-            var side = Math.abs(part.x) / 0.118;
-            return {
-              x: part.x,
-              y: 0.058 + lift - side * 0.004,
-              z: part.z,
-              r: longHairR(0.043),
-              sx: longHairAxis(0.4),
-              sy: longHairAxis(2.3),
-              sz: longHairAxis(0.78),
-              tone: "brim",
-              mirror: false
-            };
-          });
-        }
-
-        function appendLongHairBunsThree(headGrp, hairMatBrim, hairMatBack, hairSegW, hairSegH) {
-          var parts = longHairBunPartsSpec();
-          var pi;
-          for (pi = 0; pi < parts.length; pi++) {
-            var p = parts[pi];
-            var mat = p.tone === "brim" ? hairMatBrim : hairMatBack;
-            function addBunAt(xPos) {
-              var mesh = new THREE.Mesh(
-                new THREE.SphereGeometry(p.r, hairSegW, hairSegH),
-                mat
-              );
-              mesh.position.set(xPos, p.y, p.z);
-              mesh.scale.set(p.sx, p.sy, p.sz);
-              headGrp.add(mesh);
-            }
-            if (p.mirror && p.x > 0.001) {
-              addBunAt(p.x);
-              addBunAt(-p.x);
-            } else {
-              addBunAt(p.x);
-            }
-          }
-        }
-
-        function appendLongHairBunsAframe(head, colors, matStr) {
-          var parts = longHairBunPartsSpec();
-          var pi;
-          for (pi = 0; pi < parts.length; pi++) {
-            var p = parts[pi];
-            function addBunAt(xPos) {
-              var bun = document.createElement("a-sphere");
-              bun.setAttribute("position", xPos + " " + p.y + " " + p.z);
-              bun.setAttribute("radius", String(p.r));
-              bun.setAttribute("scale", p.sx + " " + p.sy + " " + p.sz);
-              bun.setAttribute(
-                "color",
-                p.tone === "brim" ? colors.brim : colors.back
-              );
-              bun.setAttribute("material", matStr);
-              head.appendChild(bun);
-            }
-            if (p.mirror && p.x > 0.001) {
-              addBunAt(p.x);
-              addBunAt(-p.x);
-            } else {
-              addBunAt(p.x);
-            }
-          }
-        }
-
         /* Lazy river: neon blue / gray striped top + bright orange inflatable ring — matches `#human` proportions (scale 1.74). */
         function createRiverFloaterCharacterEntity() {
           var outer = document.createElement("a-entity");
@@ -3479,29 +3349,23 @@
           sphere(headGrp, [-0.054, 0.012, -0.139], 0.0078, pupilMat, null, 12, 8);
           sphere(headGrp, [0.054, 0.012, -0.139], 0.0078, pupilMat, null, 12, 8);
 
-          var hairLift = LONG_HAIR_Y_LIFT;
           sphere(
             headGrp,
-            [0, 0.13 + hairLift, -0.015],
-            LONG_HAIR_RADIUS.brim,
+            [0, 0.13, -0.015],
+            0.145,
             hairMat + "; color: #4A3728",
-            LONG_HAIR_SCALES.brim,
+            [1, 0.42, 0.9],
             32,
             16
           );
           sphere(
             headGrp,
-            [0, 0.07 + hairLift, -0.06],
-            LONG_HAIR_RADIUS.top,
+            [0, 0.07, -0.06],
+            0.08,
             hairMat + "; color: #3D2E22",
-            LONG_HAIR_SCALES.top,
+            [1.2, 0.55, 0.7],
             32,
             16
-          );
-          appendLongHairBunsAframe(
-            headGrp,
-            { brim: "#4A3728", back: "#352818" },
-            hairMat
           );
 
           function appendArm(sideSign) {
@@ -5235,7 +5099,7 @@
              */
             var hairMat = "shader: standard; roughness: 0.88; metalness: 0";
             if (hairStyle === "brown") {
-              /* Brown hair — same volumes as before, local to head */
+              /* Brown short hair, local to head */
               var hBrim = document.createElement("a-sphere");
               hBrim.setAttribute("position", "0 0.13 -0.015");
               hBrim.setAttribute("radius", "0.145");
@@ -5250,20 +5114,12 @@
               hTop.setAttribute("color", "#3D2E22");
               hTop.setAttribute("material", hairMat);
               head.appendChild(hTop);
-              var hBack = document.createElement("a-sphere");
-              hBack.setAttribute("position", "0 0.02 0.07");
-              hBack.setAttribute("radius", "0.095");
-              hBack.setAttribute("scale", "1.05 0.72 0.55");
-              hBack.setAttribute("color", "#352818");
-              hBack.setAttribute("material", hairMat);
-              head.appendChild(hBack);
             } else {
               /* Straw hat — same silhouette as `#human`, grouped with head */
-              var hairLift = LONG_HAIR_Y_LIFT;
               var hatBrim = document.createElement("a-sphere");
-              hatBrim.setAttribute("position", "0 " + (0.13 + hairLift) + " -0.015");
-              hatBrim.setAttribute("radius", longHairRadiusStr("brim"));
-              hatBrim.setAttribute("scale", longHairScaleStr("brim"));
+              hatBrim.setAttribute("position", "0 0.13 -0.015");
+              hatBrim.setAttribute("radius", "0.145");
+              hatBrim.setAttribute("scale", "1 0.42 0.9");
               hatBrim.setAttribute("color", "#F7D35A");
               hatBrim.setAttribute(
                 "material",
@@ -5271,19 +5127,15 @@
               );
               head.appendChild(hatBrim);
               var hatTop = document.createElement("a-sphere");
-              hatTop.setAttribute("position", "0 " + (0.07 + hairLift) + " -0.06");
-              hatTop.setAttribute("radius", longHairRadiusStr("top"));
-              hatTop.setAttribute("scale", longHairScaleStr("top"));
+              hatTop.setAttribute("position", "0 0.07 -0.06");
+              hatTop.setAttribute("radius", "0.08");
+              hatTop.setAttribute("scale", "1.2 0.55 0.7");
               hatTop.setAttribute("color", "#F7D35A");
               hatTop.setAttribute(
                 "material",
                 "shader: standard; roughness: 0.65; metalness: 0"
               );
               head.appendChild(hatTop);
-              appendLongHairBunsAframe(head, {
-                brim: "#F0D46A",
-                back: "#DDBE4F"
-              }, "shader: standard; roughness: 0.66; metalness: 0");
             }
 
             root.appendChild(head);
@@ -5656,13 +5508,6 @@
               hTopB.setAttribute("color", "#1A0F0A");
               hTopB.setAttribute("material", hairMatB);
               head.appendChild(hTopB);
-              var hBackB = document.createElement("a-sphere");
-              hBackB.setAttribute("position", "0 0.02 0.07");
-              hBackB.setAttribute("radius", "0.095");
-              hBackB.setAttribute("scale", "1.05 0.72 0.55");
-              hBackB.setAttribute("color", "#3D2419");
-              hBackB.setAttribute("material", hairMatB);
-              head.appendChild(hBackB);
             } else if (o.hairStyle === "mediumBrown") {
               var hairMatL =
                 "shader: standard; roughness: 0.88; metalness: 0";
@@ -5680,13 +5525,6 @@
               hTopL.setAttribute("color", "#4E342E");
               hTopL.setAttribute("material", hairMatL);
               head.appendChild(hTopL);
-              var hBackL = document.createElement("a-sphere");
-              hBackL.setAttribute("position", "0 0.02 0.07");
-              hBackL.setAttribute("radius", "0.095");
-              hBackL.setAttribute("scale", "1.05 0.72 0.55");
-              hBackL.setAttribute("color", "#3E2723");
-              hBackL.setAttribute("material", hairMatL);
-              head.appendChild(hBackL);
             } else if (o.hairStyle === "lightBrown") {
               var hairMatLB =
                 "shader: standard; roughness: 0.88; metalness: 0";
@@ -5704,13 +5542,6 @@
               hTopLB.setAttribute("color", "#A88968");
               hTopLB.setAttribute("material", hairMatLB);
               head.appendChild(hTopLB);
-              var hBackLB = document.createElement("a-sphere");
-              hBackLB.setAttribute("position", "0 0.02 0.07");
-              hBackLB.setAttribute("radius", "0.095");
-              hBackLB.setAttribute("scale", "1.05 0.72 0.55");
-              hBackLB.setAttribute("color", "#8D6E63");
-              hBackLB.setAttribute("material", hairMatLB);
-              head.appendChild(hBackLB);
             } else {
               var hatBrim = document.createElement("a-sphere");
               hatBrim.setAttribute("position", "0 0.13 -0.015");
@@ -7278,20 +7109,25 @@
                 animation__sway="property: rotation; dir: alternate; loop: true; dur: 9600; easing: easeInOutSine; from: 0 -11 0; to: 0 11 0">
                 <a-entity scale="0.845 0.845 0.845">
                   <!-- Rig local +Y = toward envelope; −Y toward basket / ground -->
-                  <a-cylinder
+                  <a-entity
                     position="0 0.26 0"
-                    radius="0.39"
-                    height="0.48"
-                    segments-radial="16"
+                    geometry="primitive: cylinder; radius: 0.415; height: 0.48; segmentsRadial: 64; openEnded: true"
+                    material="shader: standard; color: #6E4E38; roughness: 0.86; metalness: 0; side: double">
+                  </a-entity>
+                  <a-cylinder
+                    position="0 0.035 0"
+                    radius="0.37"
+                    height="0.045"
+                    segments-radial="64"
                     color="#6E4E38"
                     material="shader: standard; roughness: 0.86; metalness: 0">
                   </a-cylinder>
                   <a-torus
                     position="0 0.48 0"
                     radius="0.43"
-                    radius-tubular="0.032"
-                    segments-radial="10"
-                    segments-tubular="24"
+                    radius-tubular="0.024"
+                    segments-radial="32"
+                    segments-tubular="72"
                     rotation="90 0 0"
                     color="#4A3426"
                     material="shader: standard; roughness: 0.8; metalness: 0.06">
